@@ -275,13 +275,11 @@ struct CopyFloatsJob : IJob
 	//	By default containers are assumed to be read & write
 	public NativeArray<float> dst;
 
-	float deltaTime;
-
 	//	The code actually running on the job
 	public void Execute()
 	{
 		for (int i = 0; i < src.Length; i++)
-			dst[i] = src[i] * deltaTime;
+			dst[i] = src[i];
 	}
 }
 
@@ -291,7 +289,6 @@ var job = new CopyFloatJob()
 {
 	src = new NativeArray<float>(500, Allocator.Temp);
 	dst = new NativeArray<float>(500, Allocator.Temp);
-	deltaTime = Time.deltaTime;
 }
 
 JobHandle jobHandle = job.Schedule();
@@ -316,6 +313,7 @@ src[0] = 5;				// now  you can write to this data
 
 //	IJobParallelFor automatically subdivides the foreach in chunk
 //	Executing multiple batches of paralell for each iterations.
+// 	It's like writing the for loop, but your for loop can run in parallel on different threads
 struct CopyFloatsJobFor : IJobParallelFor
 {
 	[ReadOnly]
@@ -337,6 +335,9 @@ var job = new CopyFloatsJobFor()
 	dst = new NativeArray<float>(500, Allocator.Temp);
 }
 
+//	how many iterations shoud we perform
+//	in this case we want to run 500 iterations
+//	because that's how much data we have
 //	The amount of foreach & batch size can be controlled at schedule time
 job.Schedule(500,100);
 
@@ -376,4 +377,9 @@ var jobB = new CopyFloatsJobFor(){src = dst, dst = finalDst};
 var jobBHandle = jobB.Schedule(src.Length, 100, jobAHandle);
 
 //	(reprioritize job & dependencies & potential execute job on main thread right away)
+//	both jobs will be completed, first jobA then jobB that will always complete in this order。
+//	because you put that dependency there. 
 jobBHandle.Complete();
+
+//	jobs are asynchronous and independent of frames
+// can also run heavy jobs that span multiple frames.
